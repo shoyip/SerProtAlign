@@ -117,7 +117,8 @@ loose too many sequences while we gain in compactness of the alignment.
 
 The full alignment has ~10^5 sequences, so we perform this analysis on a
 subsample of ~10^4 sequences and apply the resulting statistics to the full
-dataset. The analysis is provided in the Python Notebook.
+dataset. The analysis is provided in
+[a Python Notebook](notebooks/compact_alignment.ipynb).
 
 ## The new structural alignment
 
