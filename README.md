@@ -25,12 +25,8 @@ proteins are:
 
 | Database | Features |
 | --- | --- |
-| [NCBI Protein Database](https://www.ncbi.nlm.nih.gov/protein) | Contains
-over 355 milion protein sequence entries, and contains both curated (RefSeq) and
-non curated sequences. |
-| [UniProtKB](https://www.uniprot.org/uniprotkb/) | Contains over 291 milion
-protein sequences entries, and contains both curated (SwissProt) and non curated
-(TrEMBL) sequences. |
+| [NCBI Protein Database](https://www.ncbi.nlm.nih.gov/protein) | Contains over 355 milion protein sequence entries, and contains both curated (RefSeq) and non curated sequences. |
+| [UniProtKB](https://www.uniprot.org/uniprotkb/) | Contains over 291 milion protein sequences entries, and contains both curated (SwissProt) and non curated (TrEMBL) sequences. |
 
 We are going to choose the UniProt database. It can be downloaded from the
 [UniProtKB website](https://www.uniprot.org/uniprotkb), in two separate files
@@ -138,7 +134,7 @@ We choose a handful of structures that we want to be our structural seed. In our
 case we choose
 
 | PDB ID | Corresponding UniProt ID | Description |
-| --- | --- |
+| --- | --- | --- |
 | 1AZZ | P00771 COGS_LEPPG | Brachyurin |
 | 1CGH | P08311 CATG_HUMAN | Cathepsin G |
 | 1EQ9 | Q7SIG2 CTR1_SOLIN | Chymotrypsin-1 |
@@ -147,7 +143,7 @@ case we choose
 | 1OKX | P00772 CELA1_PIG | Chymotrypsin-like elastase family member 1 |
 | 1OSS | P00775 TRYP_STRGR | Trypsin |
 | 1T8O | P00766 CTRA_BOVIN | Chymotrypsinogen A |
-| 3TGI | P00763 TRY2_RAT| Anionic Trypsin-2 |
+| 3TGI | P00763 TRY2_RAT | Anionic Trypsin-2 |
 | 5DJ7 | Q54137 Q54137_SACER | Trypsin-like protease |
 
 We download their structures in a folder.
