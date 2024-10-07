@@ -193,6 +193,10 @@ python scripts/realign_structures_aa.py > data/3di_aligned_aa.faa
 We then use this new alignment as a seed alignment and proceed as described
 previously.
 
+## The new SSN-based alignment
+
+TODO
+
 # Prerequisites
 
 Python, Perl, MAFFT, HMMER suite, FoldSeek, wget.
