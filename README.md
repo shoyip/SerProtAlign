@@ -163,13 +163,40 @@ $ foldseek structureto3didescriptor data/ref_structs/*.pdb data/3di.dump
 The resulting `3di.dump` file contains many informations: first of all the PDB
 structure ID, then the chain identifier, the name of the structure, the amino
 acid sequence, the 3di sequence and positional informations about the residues.
-We just need the amino acid and 3di sequences for the desired chains. This means
-that we have to hand pick the chains of interest, and put the 3di sequences in
-one file and the amino acid sequences in another file. We then align the 3di
-sequences, then feed the gaps that we get from the 3di alignment in the amino
-acid sequences. We then use this new alignment as a seed alignment and proceed
-as described previously.
+We just need the amino acid and 3di sequences for the desired chains.
 
-## Impressum
+
+```
+$ awk -F'\t' '{print ">"$1"\n"$3; next}{print}' data/3di.dump > data/3di.faa
+```
+
+```
+$ awk -F'\t' '{print ">"$1"\n"$2; next}{print}' data/3di.dump > data/3di_aa.faa
+```
+
+This means that we have to hand pick the chains of interest, and put the 3di
+sequences in one file and the amino acid sequences in another file. We then
+align the 3di sequences, then feed the gaps that we get from the 3di alignment
+in the amino acid sequences.
+
+```
+$ mafft 3di.fasta | awk 'BEGIN {ORS=""} !/^>/ { print $1 } /^>/ {print "\n" $1 "\n" }' | tee data/3di_aligned.faa
+```
+
+Now we realign the amino acidic sequences corresponding to the structures by
+inserting gaps in the same places as in the 3di sequences.
+
+```
+python scripts/realign_structures_aa.py > data/3di_aligned_aa.faa
+```
+
+We then use this new alignment as a seed alignment and proceed as described
+previously.
+
+# Prerequisites
+
+Python, Perl, MAFFT, HMMER suite, FoldSeek, wget.
+
+# Impressum
 
 Shoichi Yip. 2024.
