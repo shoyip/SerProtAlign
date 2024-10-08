@@ -187,7 +187,7 @@ Now we realign the amino acidic sequences corresponding to the structures by
 inserting gaps in the same places as in the 3di sequences.
 
 ```
-python scripts/realign_structures_aa.py > data/3di_aligned_aa.faa
+$ python scripts/realign_structures_aa.py > data/3di_aligned_aa.faa
 ```
 
 We then use this new alignment as a seed alignment and proceed as described
@@ -195,7 +195,32 @@ previously.
 
 ## The new SSN-based alignment
 
-TODO
+The Sequence Similarity Network based alignment was proposed in a paper by Copp
+et al., 2019.
+
+### The starting sequence list
+
+I started by dealigning the alignment that I previously obtained by `hmmsearch`.
+Maybe it it is a sounder choice to directly take the full length sequences?
+Should I PSI-BLAST them?
+
+### Creating a "hierarchical" clustering
+
+We have ~10^5 sequences, which is a lot. We progressively cluster them, by
+issuing repeatedly the `cd-hit` command.
+
+```
+$ cd-hit to_be_clustered.faa -c 0.9 -o clusters.faa
+```
+
+This command will find clusters of sequences that are more than 90% similar,
+then choose the most representative one and for each cluster print it on the
+output file. This command will also generate a `clusters.faa.clstr` file, which
+will in turn contain a summary of the statistics of the clustering.
+
+We perform this clustering procedure iteratively, by choosing lower and lower
+thresholds. We performed four steps at 90%, 70%, 50% and 40%. We were able to
+cluster 122696 sequences in 5803 final clusters.
 
 # Prerequisites
 
