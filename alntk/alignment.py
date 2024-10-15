@@ -96,7 +96,7 @@ def get_compact_alignment(aln_descs, aln_seqs, gap_threshold_ratio, return_gappy
     final_aln_descs = aln_descs[sequences_mask]
     
     if return_gappy_pos:
-        return gappy_positions
+        return final_aln_descs, final_aln_seqs, gappy_positions
     else:
         return final_aln_descs, final_aln_seqs
 
