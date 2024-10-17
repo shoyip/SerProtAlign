@@ -49,7 +49,7 @@ def get_unaligned_seqs(aln_seqs):
         unaln_seqs.append(unaln_seq)
     return unaln_seqs
 
-def get_compact_alignment(aln_descs, aln_seqs, gap_threshold_ratio, return_gappy_pos=False):
+def get_compact_alignment(aln_descs, aln_seqs, gap_threshold_ratio, return_gappy_pos=False, tol_uaa=0.):
     """
     Compactify the alignment by deleting sequences and consequently
     deleting entirely gapped columns.
@@ -72,8 +72,9 @@ def get_compact_alignment(aln_descs, aln_seqs, gap_threshold_ratio, return_gappy
     # We call these counts of "unusual amino acids"
     unusual_aa_per_sequence = np.sum(aln_seqs[:, gappy_positions] != '-', axis=1)
 
-    # Get the index of sequences that DO NOT have "unusual amino acids"
-    sequences_mask = np.where(unusual_aa_per_sequence == 0)[0]
+    # Get the index of sequences that have "unusual amino acids" less than tol_uaa
+    int_tol_uaa = int(aln_seqs.shape[1] * tol_uaa)
+    sequences_mask = np.where(unusual_aa_per_sequence <= int_tol_uaa)[0]
 
     # Mask the previous alignment and choose only the sequences that
     # DO NOT have "unusual amino acids"
