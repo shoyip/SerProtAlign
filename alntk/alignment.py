@@ -23,7 +23,7 @@ def import_from_fasta(fasta_file):
     
     for record in SeqIO.parse(fasta_file, 'fasta'):
         seqs.append(str(record.seq))
-        descs.append(record.description)
+        descs.append(record.description.split('/')[0])
 
     descs_arr = np.array(descs)
     seqs_arr = np.array([[residue for residue in seq] for seq in seqs])
