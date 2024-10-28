@@ -99,16 +99,26 @@ from Michael Kuhn to perform this operation and to get rid of insertions (dot
 and lowercase characters).
 
 ```
-$ perl scripts/stk2fasta.pl data/serprot_matches.stk > data/serprot_matches.faa
+$ perl scripts/stk2fasta.pl data/serprot_matches.stk > data/new_aln0.faa
 ```
 
-### Deduplicating
+### A first cleaning step
 
-A drawback of using `hmmsearch` is that it might match the same sequence twice
-because two different parts of it had a high enough match with it. Often they
-are spurious matches with long sequences, so we get rid of them.
+Now we have an alignment which comes straight out of the HMMER search. This
+alignment has:
 
-### Throwing away unusual sequences
+- Many extremely short / long sequences that we want to get rid of, because they
+    affect our alignment and may come from the truncation of one sequence;
+- A propeptide on the N-terminus (i.e. begninning of the protein sequence), and
+    we know the subsequent amino acidic pattern (`IVGGY...` like), so we want to
+    get rid of the columns before this pattern;
+- Many sequences also do not have amino acids in these positions, and so we get
+    rid of them as well.
+
+This process is detailed in the
+[Alignment Cleaning notebook](notebooks/00_alignment_cleaning.ipynb).
+
+### Throwing away unusual sequences in one go
 
 Before doing any truncation, we would like to find a scheme to reduce the
 alignment length without losing too much information. We do this by finding away
@@ -118,7 +128,49 @@ loose too many sequences while we gain in compactness of the alignment.
 The full alignment has ~10^5 sequences, so we perform this analysis on a
 subsample of ~10^4 sequences and apply the resulting statistics to the full
 dataset. The analysis is provided in
-[a Python Notebook](notebooks/compact_alignment.ipynb).
+[the Compact Alignment Notebook](notebooks/01_compact_alignment.ipynb).
+
+## Throwing away unusual sequences iteratively
+
+We can perform the compactification detailed in the previous paragraph in an
+iterative manner. We check in
+[the Compact Iterative Notebook](notebooks/02_compact_iterative.ipynb)
+that if we choose a sensible threshold we get, already by the second or third
+iteration, a drastic reduction of columns with high gap density. This is a good
+sign: it means that we are making a good reduction in gappy columns.
+
+We also check that the sequences that we are getting rid of are not those that
+belong to the "reference" proteins: we want to keep the Rat Trypsin, the Bovine
+Chymotrypsin, the Pig Chymotrypsin-like Elastase, the Bovine Duodenase and the
+Human Thrombin. Just the Human Thrombin gets systematically thrown out at the
+first round.
+
+| Description | UniProt Entry Name | UniProt Accession | Link |
+| --- | --- | --- | --- |
+| Rat Trypsin | `TRY2_RAT` | `P00763` | [link](https://www.uniprot.org/uniprotkb/P00763/) |
+| Bovine Chymotrypsin | `CTRA_BOVIN` | `P00766` | [link](https://www.uniprot.org/uniprotkb/P00766/) |
+| Pig Chymotrypsin-like Elastase | `CELA1_PIG` | `P00772` | [link](https://www.uniprot.org/uniprotkb/P00772/) |
+| Bovine Duodenase | `DDN1_BOV` | `P80219` | [link](https://www.uniprot.org/uniprotkb/P80219/) |
+| Human Thrombin | `THRB_HUMAN` | `P00734` | [link](https://www.uniprot.org/uniprotkb/P00734/) |
+
+We keep the first three because they are the most known serine proteases in
+literature and also the mostly studies ones, the Bovine Duodenase because it has
+a particular multispecific behaviour and the Human Thrombin also because widely
+studied and structurally known.
+
+## Throwing away sequences that are unlike references
+
+In order to avoid getting rid of sequences that we want to keep (i.e. Human
+Thrombin) we can adopt the following strategy: we take the five reference
+sequences, keep all their non-gapped positions, and throw away the sequences
+that do have amino acids in the gapped columns.
+
+The results of this procedure and the previous one are plotted on a PCA
+scatter plot in order to understand their coverage over the protein family.
+
+**TODO**: we could be less strict and set a threshold on the amount of amino
+acids that we can throw away in a sequence before throwing away the entire
+sequence itself.
 
 ## The new structural alignment
 
@@ -193,6 +245,10 @@ $ python scripts/realign_structures_aa.py > data/3di_aligned_aa.faa
 We then use this new alignment as a seed alignment and proceed as described
 previously.
 
+**TODO**: use another structural alignment technique because this one is made
+for big datasets, like mTM-align. However it does not on a low-end PC, so it
+should be done on a more powerful computer.
+
 ## The new SSN-based alignment
 
 The Sequence Similarity Network based alignment was proposed in a paper by Copp
@@ -220,7 +276,21 @@ will in turn contain a summary of the statistics of the clustering.
 
 We perform this clustering procedure iteratively, by choosing lower and lower
 thresholds. We performed four steps at 90%, 70%, 50% and 40%. We were able to
-cluster 122696 sequences in 5803 final clusters.
+cluster the sequences in 3500 final clusters.
+
+The `scripts/hierarchical_clustering.sh` script contains the iterative procedure
+by which the final clusters were obtained.
+
+### All-to-all BLASTing for different thresholds
+
+We now take the 3500 sequences as the starting point, as if they were our
+fundamental nodes. We want to create a network: we do this by all-to-all
+BLASTing the sequences, and by establishing edges where the E-value is higher
+than a certain threshold. We do this by changing this threshold: the
+reconstructed network has hence different structures.
+
+We do this visualization step in Cytoscape, by following the instructions in the
+Copp et al. paper.
 
 # Prerequisites
 
