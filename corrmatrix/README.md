@@ -2,7 +2,7 @@ These are programs in C++ that allow for the computation of the
 $\~{C}_{ij}$ matrix as defined as
 
 $$
-\~{C}_{ij} = \sqrt{\sum_{ab} C_{ij}^{ab}^2}
+\tilde{C}_{ij} = \sqrt{\sum_{ab} C_{ij}^{ab}^2}
 $$
 
 where
