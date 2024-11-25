@@ -1,8 +1,9 @@
 #!/bin/bash
 
-DATA_FOLDER=../data
+DATA_FOLDER=./data
+SCRIPTS_FOLDER=./scripts
 
-bash dealign.sh $DATA_FOLDER/new_aln.faa > $DATA_FOLDER/new_dealn.faa
+bash $SCRIPTS_FOLDER/dealign.sh $DATA_FOLDER/new_aln.faa > $DATA_FOLDER/new_dealn.faa
 
 cd-hit -i $DATA_FOLDER/new_dealn.faa -c 0.9 -o $DATA_FOLDER/ch_run1.faa
 cd-hit -i $DATA_FOLDER/ch_run1.faa -c 0.7 -o $DATA_FOLDER/ch_run2.faa
