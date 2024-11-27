@@ -63,6 +63,22 @@ class Alignment:
         print(f"Number of sequences: {len(self.seq_idxs)}")
         print(f"Number of positions: {len(self.pos_idxs)}")
 
+    def get_seq_gap(self):
+        """
+        """
+        aln_seqs = self.get_seqs()
+        gaps_per_seq = np.sum(aln_seqs == '-', axis=1)
+    
+        return gaps_per_seq
+    
+    def get_pos_gap(self):
+        """
+        """
+        aln_seqs = self.get_seqs()
+        gaps_per_pos = np.sum(aln_seqs == '-', axis=0)
+    
+        return gaps_per_pos
+
 def filter_length(aln, min_len, max_len):
     """
     """

@@ -38,31 +38,3 @@ def plot_length_distrib(aln, aln_title, bins=50):
     ax.hist(lengths, bins=bins)
 
     return fig
-
-def plot_seq_gap_distrib(aln, aln_title, bins=20):
-    """
-    """
-    aln_seqs = aln.get_seqs()
-    gaps_per_seq = np.sum(aln_seqs == '-', axis=1)
-    
-    fig, ax = plt.subplots()
-    ax.set_title(aln_title)
-    ax.set_xlabel('Number of Gaps in Sequence')
-    ax.set_ylabel('Count')
-    ax.hist(gaps_per_seq, bins=bins)
-
-    return fig
-
-def plot_pos_gap_distrib(aln, aln_title, bins=20):
-    """
-    """
-    aln_seqs = aln.get_seqs()
-    gaps_per_pos = np.sum(aln_seqs == '-', axis=0)
-    
-    fig, ax = plt.subplots()
-    ax.set_title(aln_title)
-    ax.set_xlabel('Number of Gaps in Position')
-    ax.set_ylabel('Count')
-    ax.hist(gaps_per_pos, bins=bins)
-
-    return fig
