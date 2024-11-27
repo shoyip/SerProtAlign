@@ -1,59 +1,122 @@
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
 from Bio import SeqIO
 
-def import_from_fasta(fasta_file):
-    """
-    Import an array of descriptions and an array of sequences from a FASTA file.
+class Alignment:
+    def __init__(self):
+        np.random.seed(42)
 
-    Parameters
-    ----------
-    fasta_file: str
-        filename of FASTA file, typically `.fasta`, `.faa` or `.fa`.
-
-    Returns
-    -------
-    descs_arr: ndarray
-        1D array containing the descriptions from the FASTA file
-    seqs_arr: ndarray
-        2D array containing the sequence alignment, with one sequence
-        per row and one position per column
-    """
-    seqs = []
-    descs = []
+    def import_from_fasta(self, fasta_file):
+        """
+        Import an array of descriptions and an array of sequences from a FASTA file.
+        Save them as attributes of the Alignment instance.
     
-    for record in SeqIO.parse(fasta_file, 'fasta'):
-        seqs.append(str(record.seq))
-        descs.append(record.description.split('/')[0])
+        Parameters
+        ----------
+        fasta_file: str
+            filename of FASTA file, typically `.fasta`, `.faa` or `.fa`.
+        """
+        seqs = []
+        descs = []
+        
+        for record in SeqIO.parse(fasta_file, 'fasta'):
+            seqs.append(str(record.seq))
+            descs.append(record.description.split('/')[0])
+    
+        self.descs_arr = np.array(descs)
+        self.seqs_arr = np.array([[residue for residue in seq] for seq in seqs])
+        self.seq_idxs = np.arange(0, self.seqs_arr.shape[0])
+        self.pos_idxs = np.arange(0, self.seqs_arr.shape[1])
 
-    descs_arr = np.array(descs)
-    seqs_arr = np.array([[residue for residue in seq] for seq in seqs])
-    return descs_arr, seqs_arr
+    def subsample(self, n_subsample):
+        """
+        Randomly choose a subsample for faster computation of statistics.
+        Sequences are not deleted, just the list of indices `seq_idxs` is updated.
+        Generator is seeded at 42 for reproducibility.
 
-def get_unaligned_seqs(aln_seqs):
+        Parameters
+        ----------
+        n_subsample: int
+            number of sequences that we want to subsample from the original alignment
+        """
+        self.seq_idxs = np.random.randint(0, self.seqs_arr.shape[0], size=n_subsample)
+
+    def drop_seqs(self, del_seq_idxs):
+        """
+        """
+        self.seq_idxs = np.delete(self.seq_idxs, del_seq_idxs)
+
+    def drop_cols(self, del_pos_idxs):
+        self.pos_idxs = np.delete(self.pos_idxs, del_pos_idxs)
+
+    def get_seqs(self):
+        return self.seqs_arr[self.seq_idxs, :][:, self.pos_idxs]
+
+    def get_descs(self):
+        return self.descs_arr[self.seq_idxs]
+
+    def print_report(self):
+        print(f"Number of sequences: {len(self.seq_idxs)}")
+        print(f"Number of positions: {len(self.pos_idxs)}")
+
+def filter_length(aln, min_len, max_len):
     """
-    Get a list of unaligned sequences from the alignment sequences array.
-
-    Parameters
-    ----------
-    aln_seqs: ndarray
-        2D array containing the sequence alignment
-
-    Returns
-    -------
-    unaln_seqs: list
-        List of strings, one for each sequence of the alignment
     """
-    unaln_seqs = []
-    for seq in aln_seqs:
-        unaln_seq = (''.join(seq)).replace('-', '')
-        unaln_seqs.append(unaln_seq)
-    return unaln_seqs
+    aln_seqs = aln.get_seqs()
+    cond_min = np.sum(aln_seqs != '-', axis=1) > min_len
+    cond_max = np.sum(aln_seqs != '-', axis=1) < max_len
+    seqs_tbd = np.where(cond_min & cond_max == True)[0]
+    return seqs_tbd, []
 
-def get_compact_alignment(aln_descs, aln_seqs, gap_threshold_ratio, return_gappy_pos=False, tol_uaa=0.):
+def filter_residues(aln, ref_seq_acc, ref_pattern):
+    """
+    """
+    aln_seqs = aln.get_seqs()
+    aln_descs = aln.get_descs()
+
+    def find_pattern(text, pattern):
+        """
+        """
+        pattern = np.asarray(list(pattern))
+        
+        if len(pattern) > len(text):
+            return np.array([], dtype=int)
+        
+        # Create sliding window view of text
+        windows = np.lib.stride_tricks.as_strided(
+            text, 
+            shape=(len(text) - len(pattern) + 1, len(pattern)),
+            strides=(text.strides[0], text.strides[0])
+        )
+        
+        # Find indices where windows match the pattern
+        match_indices = np.where(np.all(windows == pattern, axis=1))[0]
+        
+        return match_indices
+
+    ref_idx = np.where(np.array([e.split('|')[2] for e in aln_descs]) == ref_seq_acc)[0][0]
+    ref_seq = aln_seqs[ref_idx]
+    ref_pattern_idxs = find_pattern(ref_seq, ref_pattern)
+
+    # delete sequences that have a gap in the columns corresponding
+    # to the first occurence of the reference pattern in the reference sequence
+    seqs_tbd = np.where(np.sum(aln_seqs[:, ref_pattern_idxs[0]:ref_pattern_idxs[0]+len(ref_pattern)] == '-', axis=1) > 0)[0]
+
+    return seqs_tbd, []
+
+def delete_bjxz(aln):
+    """
+    """
+    aln_seqs = aln.get_seqs()
+    seqs_tbd = np.where(np.sum((aln_seqs == 'B') + (aln_seqs == 'J') + (aln_seqs == 'X') + (aln_seqs == 'Z'), axis=1) > 0)[0]
+    return seqs_tbd, []
+
+def compactify(aln, gap_threshold_ratio=0.95):
     """
     Compactify the alignment by deleting sequences and consequently
     deleting entirely gapped columns.
     """
+    aln_seqs = aln.get_seqs()
 
     # Get the gap threshold in terms of integer number of gaps from the ratio
     gap_threshold = int(gap_threshold_ratio*aln_seqs.shape[0])
@@ -65,58 +128,13 @@ def get_compact_alignment(aln_descs, aln_seqs, gap_threshold_ratio, return_gappy
     gaps_per_column = np.sum(aln_seqs_isgap, axis=0)
 
     # Get the index of all the columns that have more gaps than the threshold
-    # We call these "gappy positions"
-    gappy_positions = np.where(gaps_per_column > gap_threshold)[0]
+    # We call these "positions to be deleted"
+    pos_tbd = np.where(gaps_per_column > gap_threshold)[0]
 
     # Count how many gaps do sequences have in "gappy positions"
     # We call these counts of "unusual amino acids"
-    unusual_aa_per_sequence = np.sum(aln_seqs[:, gappy_positions] != '-', axis=1)
+    # The sequences that have these amino acids are "sequences to be deleted"
+    unusual_aa_per_sequence = np.sum(aln_seqs[:, pos_tbd] != '-', axis=1)
+    seq_tbd = np.where(unusual_aa_per_sequence > 0)[0]
 
-    # Get the index of sequences that have "unusual amino acids" less than tol_uaa
-    int_tol_uaa = int(aln_seqs.shape[1] * tol_uaa)
-    sequences_mask = np.where(unusual_aa_per_sequence <= int_tol_uaa)[0]
-
-    # Mask the previous alignment and choose only the sequences that
-    # DO NOT have "unusual amino acids"
-    new_aln_seqs = aln_seqs[sequences_mask, :]
-
-    # Get the amino acid / gap boolean matrix
-    new_aln_seqs_isaa = (new_aln_seqs != '-')
-
-    # Count the number of amino acidic residues for each column
-    new_aa_per_column = np.sum(new_aln_seqs_isaa, axis=0)
-
-    # Get the index of positions where there are no amino acids
-    # (i.e. the column is entirely made of gaps)
-    position_mask = np.where(new_aa_per_column > 0)[0]
-
-    # Mask the alignment by deleting fully gapped columns
-    final_aln_seqs = new_aln_seqs[:, position_mask]
-
-    # Mask the descriptions
-    final_aln_descs = aln_descs[sequences_mask]
-    
-    if return_gappy_pos:
-        return final_aln_descs, final_aln_seqs, gappy_positions
-    else:
-        return final_aln_descs, final_aln_seqs
-
-def write_to_fasta(aln_descs, aln_seqs, fasta_file):
-    """
-    Write alignment to a FASTA file.
-
-    Parameters
-    ----------
-    aln_descs: ndarray
-        1D array containing the description of each sequence
-    aln_seqs: ndarray
-        2D array containing the sequence alignment
-    fasta_file: str
-        Filename of the FASTA file that we want to write
-    """
-    with open(fasta_file, 'w') as f:
-        for d, s in zip(aln_descs, aln_seqs):
-            s = ''.join(s)
-            f.write(f'>{d}\n')
-            f.write(s)
-            f.write('\n\n')
+    return seq_tbd, pos_tbd 
