@@ -25,8 +25,10 @@ class Alignment:
     
         self.descs_arr = np.array(descs)
         self.seqs_arr = np.array([[residue for residue in seq] for seq in seqs])
-        self.seq_idxs = np.arange(0, self.seqs_arr.shape[0])
-        self.pos_idxs = np.arange(0, self.seqs_arr.shape[1])
+        self.seq_idxs0 = np.arange(0, self.seqs_arr.shape[0])
+        self.pos_idxs0 = np.arange(0, self.seqs_arr.shape[1])
+        self.seq_idxs = self.seq_idxs0
+        self.pos_idxs = self.pos_idxs0
 
     def subsample(self, n_subsample):
         """
@@ -41,17 +43,15 @@ class Alignment:
         """
         self.seq_idxs = np.random.randint(0, self.seqs_arr.shape[0], size=n_subsample)
 
-    def drop_seqs(self, del_seq_idxs):
-        """
-        """
-        self.seq_idxs = np.delete(self.seq_idxs, del_seq_idxs)
-
-    def drop_cols(self, del_pos_idxs):
-        self.pos_idxs = np.delete(self.pos_idxs, del_pos_idxs)
-
     def drop(self, del_idxs):
         self.seq_idxs = np.delete(self.seq_idxs, del_idxs[0])
         self.pos_idxs = np.delete(self.pos_idxs, del_idxs[1])
+
+    def reset_seq(self):
+        self.seq_idxs = self.seq_idxs0
+
+    def reset_pos(self):
+        self.pos_idxs = self.pos_idxs0
 
     def get_seqs(self):
         return self.seqs_arr[self.seq_idxs, :][:, self.pos_idxs]
@@ -116,7 +116,7 @@ def filter_ambiguous(aln):
     seq_tbd = np.where(np.sum((aln_seqs == 'B') + (aln_seqs == 'J') + (aln_seqs == 'X') + (aln_seqs == 'Z'), axis=1) > 0)[0]
     return seq_tbd, []
 
-def compactify(aln, gap_threshold_ratio=0.95):
+def filter_compact(aln, gap_threshold_ratio=0.95):
     """
     Compactify the alignment by deleting sequences and consequently
     deleting entirely gapped columns.

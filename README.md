@@ -3,6 +3,54 @@
 This repository contains the codebase (libraries, codes, notebooks, scripts) for
 performing alignments of the Serine Protease family.
 
+The tree of the repository, including the files unavailable on the repository
+such as the `data` folder, is the following.
+
+```
+.
+├── alntk
+│   ├── alignment_old.py
+│   ├── alignment.py
+│   ├── __init__.py
+│   ├── pca.py
+│   └── plotting.py
+├── archive
+│   └── notebooks
+│       ├── 00_alignment_cleaning.ipynb
+│       ├── 01_compact_alignment.ipynb
+│       ├── 02_compact_iterative.ipynb
+│       ├── 03_compact_ref.ipynb
+│       ├── 04_iteraln_comparison.ipynb
+│       ├── 06_corrmatrix_analysis.ipynb
+│       ├── 07_remgappos.ipynb
+│       └── compact_pca.ipynb
+├── corrmatrix
+│   ├── corrmatrix.cpp
+│   ├── corrmatrix_mmap.cpp
+│   ├── corrmatrix_vector.cpp
+│   └── README.md
+├── data
+│   ├── ctilde.csv
+│   ├── ctilde_iter.csv
+│   ├── iter_aln.faa
+│   ├── new_aln0.faa
+│   └── new_aln.faa
+├── LICENSE
+├── logs
+├── notebooks
+│   ├── 00_alignment_cleaning.ipynb
+│   ├── 01_compact_alignment.ipynb
+│   └── sandbox.ipynb
+├── README.md
+├── scripts
+│   ├── dealign.sh
+│   ├── download_uniprot.sh
+│   ├── hierarchical_clustering.sh
+│   ├── realign_structures_aa.py
+│   └── stk2fasta.pl
+└── setup.py
+```
+
 ## How is the family defined
 
 We can use multiple definitions, they are slightly different between each other:
