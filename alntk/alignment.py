@@ -69,8 +69,8 @@ def filter_length(aln, min_len, max_len):
     aln_seqs = aln.get_seqs()
     cond_min = np.sum(aln_seqs != '-', axis=1) > min_len
     cond_max = np.sum(aln_seqs != '-', axis=1) < max_len
-    seqs_tbd = np.where(cond_min & cond_max == False)[0]
-    return seqs_tbd, []
+    seq_tbd = np.where(cond_min & cond_max == False)[0]
+    return seq_tbd, []
 
 def filter_residues(aln, ref_seq_acc, ref_pattern):
     """
@@ -104,16 +104,17 @@ def filter_residues(aln, ref_seq_acc, ref_pattern):
 
     # delete sequences that have a gap in the columns corresponding
     # to the first occurence of the reference pattern in the reference sequence
-    seqs_tbd = np.where(np.sum(aln_seqs[:, ref_pattern_idxs[0]:ref_pattern_idxs[0]+len(ref_pattern)] == '-', axis=1) > 0)[0]
+    seq_tbd = np.where(np.sum(aln_seqs[:, ref_pattern_idxs[0]:ref_pattern_idxs[0]+len(ref_pattern)] == '-', axis=1) > 0)[0]
+    pos_tbd = np.arange(0, ref_pattern_idxs[0])
 
-    return seqs_tbd, []
+    return seq_tbd, pos_tbd
 
 def filter_ambiguous(aln):
     """
     """
     aln_seqs = aln.get_seqs()
-    seqs_tbd = np.where(np.sum((aln_seqs == 'B') + (aln_seqs == 'J') + (aln_seqs == 'X') + (aln_seqs == 'Z'), axis=1) > 0)[0]
-    return seqs_tbd, []
+    seq_tbd = np.where(np.sum((aln_seqs == 'B') + (aln_seqs == 'J') + (aln_seqs == 'X') + (aln_seqs == 'Z'), axis=1) > 0)[0]
+    return seq_tbd, []
 
 def compactify(aln, gap_threshold_ratio=0.95):
     """
