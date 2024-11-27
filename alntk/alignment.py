@@ -49,6 +49,10 @@ class Alignment:
     def drop_cols(self, del_pos_idxs):
         self.pos_idxs = np.delete(self.pos_idxs, del_pos_idxs)
 
+    def drop(self, del_idxs):
+        self.seq_idxs = np.delete(self.seq_idxs, del_idxs[0])
+        self.pos_idxs = np.delete(self.pos_idxs, del_idxs[1])
+
     def get_seqs(self):
         return self.seqs_arr[self.seq_idxs, :][:, self.pos_idxs]
 
@@ -65,7 +69,7 @@ def filter_length(aln, min_len, max_len):
     aln_seqs = aln.get_seqs()
     cond_min = np.sum(aln_seqs != '-', axis=1) > min_len
     cond_max = np.sum(aln_seqs != '-', axis=1) < max_len
-    seqs_tbd = np.where(cond_min & cond_max == True)[0]
+    seqs_tbd = np.where(cond_min & cond_max == False)[0]
     return seqs_tbd, []
 
 def filter_residues(aln, ref_seq_acc, ref_pattern):
@@ -104,7 +108,7 @@ def filter_residues(aln, ref_seq_acc, ref_pattern):
 
     return seqs_tbd, []
 
-def delete_bjxz(aln):
+def filter_ambiguous(aln):
     """
     """
     aln_seqs = aln.get_seqs()
@@ -138,3 +142,16 @@ def compactify(aln, gap_threshold_ratio=0.95):
     seq_tbd = np.where(unusual_aa_per_sequence > 0)[0]
 
     return seq_tbd, pos_tbd 
+
+def write_to_fasta(aln, fasta_file):
+    """
+    Write alignment to a FASTA file.
+    """
+    aln_descs = aln.get_descs()
+    aln_seqs = aln.get_seqs()
+    with open(fasta_file, 'w') as f:
+        for d, s in zip(aln_descs, aln_seqs):
+            s = ''.join(s)
+            f.write(f'>{d}\n')
+            f.write(s)
+            f.write('\n\n')

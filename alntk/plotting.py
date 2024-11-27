@@ -1,5 +1,6 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 
 def default_plot_style():
     """
@@ -23,3 +24,17 @@ def default_plot_style():
     color_cycle = ['377eb8', 'e41a1c', '4daf4a', '984ea3', 'ff7f00', 'ffff33', 'a65628', 'f781bf', '999999']
     mpl.rcParams["axes.prop_cycle"] = mpl.cycler("color", color_cycle)
     return color_cycle
+
+def plot_length_distrib(aln, aln_title, bins=50):
+    """
+    """
+    aln_seqs = aln.get_seqs()
+    lengths = np.sum(aln_seqs != '-', axis=1)
+    
+    fig, ax = plt.subplots()
+    ax.set_title(aln_title)
+    ax.set_xlabel('Length')
+    ax.set_ylabel('Count')
+    ax.hist(lengths, bins=bins)
+
+    return fig
