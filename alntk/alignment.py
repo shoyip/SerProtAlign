@@ -79,10 +79,19 @@ class Alignment:
     
         return gaps_per_pos
 
+def filter_gappy(aln, threshold=0.8):
+    """
+    """
+    aln_seqs = aln.get_seqs()
+
+    col_tbd = np.where(np.sum(aln_seqs == '-', axis=0) / aln_seqs.shape[0] > threshold)
+    return [], col_tbd
+
 def filter_length(aln, min_len, max_len):
     """
     """
     aln_seqs = aln.get_seqs()
+    
     cond_min = np.sum(aln_seqs != '-', axis=1) > min_len
     cond_max = np.sum(aln_seqs != '-', axis=1) < max_len
     seq_tbd = np.where(cond_min & cond_max == False)[0]
