@@ -67,7 +67,7 @@ class Alignment:
         """
         """
         aln_seqs = self.get_seqs()
-        gaps_per_seq = np.sum(aln_seqs == '-', axis=1)
+        gaps_per_seq = np.sum(aln_seqs == '-', axis=1) / aln_seqs.shape[1]
     
         return gaps_per_seq
     
@@ -75,7 +75,7 @@ class Alignment:
         """
         """
         aln_seqs = self.get_seqs()
-        gaps_per_pos = np.sum(aln_seqs == '-', axis=0)
+        gaps_per_pos = np.sum(aln_seqs == '-', axis=0) / aln_seqs.shape[0]
     
         return gaps_per_pos
 
