@@ -38,3 +38,13 @@ def plot_length_distrib(aln, aln_title, bins=50):
     ax.hist(lengths, bins=bins)
 
     return fig
+
+def plot_gap_distrib(fig_data):
+    fig = plt.figure()
+    plt.title('Gaps per sequence')
+    for dataset in fig_data:
+        plt.hist(dataset['data'], label=dataset['label'], facecolor='none', edgecolor='#'+dataset['color'], linewidth=1)
+    plt.xlabel('Ratio of gaps')
+    plt.ylabel('Occurences')
+    plt.legend()
+plt.show()

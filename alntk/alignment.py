@@ -29,6 +29,7 @@ class Alignment:
         self.pos_idxs0 = np.arange(0, self.seqs_arr.shape[1])
         self.seq_idxs = self.seq_idxs0
         self.pos_idxs = self.pos_idxs0
+        self.seq_untrim_idxs = self.seq_idxs0
 
     def subsample(self, n_subsample):
         """
@@ -44,6 +45,9 @@ class Alignment:
         self.seq_idxs = np.random.randint(0, self.seqs_arr.shape[0], size=n_subsample)
 
     def drop(self, del_idxs):
+        aln_seqs = self.get_seqs()
+        drop_seq_trim_idxs = np.where(np.sum(aln_seqs[:, del_idxs[1]] != '-', axis=1) > 0)[0]
+        self.seq_untrim_idxs = np.delete(self.seq_untrim_idxs, drop_seq_trim_idxs)
         self.seq_idxs = np.delete(self.seq_idxs, del_idxs[0])
         self.pos_idxs = np.delete(self.pos_idxs, del_idxs[1])
 
@@ -52,6 +56,7 @@ class Alignment:
 
     def reset_pos(self):
         self.pos_idxs = self.pos_idxs0
+        self.seq_untrim_idxs = self.seq_idxs0
 
     def get_seqs(self):
         return self.seqs_arr[self.seq_idxs, :][:, self.pos_idxs]
@@ -62,6 +67,7 @@ class Alignment:
     def print_report(self):
         print(f"Number of sequences: {len(self.seq_idxs)}")
         print(f"Number of positions: {len(self.pos_idxs)}")
+        print(f"Number of untrimmed sequences: {len(self.seq_untrim_idxs)}")
 
     def get_seq_gap(self):
         """
