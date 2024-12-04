@@ -64,10 +64,11 @@ class Alignment:
     def get_descs(self):
         return self.descs_arr[self.seq_idxs]
 
-    def print_report(self):
+    def print_report(self, trimmed=False):
         print(f"Number of sequences: {len(self.seq_idxs)}")
         print(f"Number of positions: {len(self.pos_idxs)}")
-        print(f"Number of untrimmed sequences: {len(self.seq_untrim_idxs)}")
+        if trimmed:
+            print(f"Number of untrimmed sequences: {len(self.seq_untrim_idxs)}")
 
     def get_seq_gap(self):
         """
@@ -103,7 +104,42 @@ def filter_length(aln, min_len, max_len):
     seq_tbd = np.where(cond_min & cond_max == False)[0]
     return seq_tbd, []
 
-def filter_residues(aln, ref_seq_acc, ref_pattern):
+def filter_residue(aln, ref_seq_acc, ref_pattern, residue):
+    """
+    """
+    aln_seqs = aln.get_seqs()
+    aln_descs = aln.get_descs()
+
+    def find_pattern(text, pattern):
+        """
+        """
+        pattern = np.asarray(list(pattern))
+        
+        if len(pattern) > len(text):
+            return np.array([], dtype=int)
+        
+        # Create sliding window view of text
+        windows = np.lib.stride_tricks.as_strided(
+            text, 
+            shape=(len(text) - len(pattern) + 1, len(pattern)),
+            strides=(text.strides[0], text.strides[0])
+        )
+        
+        # Find indices where windows match the pattern
+        match_indices = np.where(np.all(windows == pattern, axis=1))[0]
+        
+        return match_indices
+
+    ref_idx = np.where(np.array([e.split('|')[2] for e in aln_descs]) == ref_seq_acc)[0][0]
+    ref_seq = aln_seqs[ref_idx]
+    ref_pattern_idxs = find_pattern(ref_seq, ref_pattern)
+
+    # delete sequences that do not have a specific residue in the first position of the pattern
+    seq_tbd = np.where(aln_seqs[:, ref_pattern_idxs[0]] != residue)[0]
+
+    return seq_tbd, []
+
+def filter_residues_any(aln, ref_seq_acc, ref_pattern):
     """
     """
     aln_seqs = aln.get_seqs()
