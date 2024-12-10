@@ -11,6 +11,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <random>
+#include <algorithm>
+#include <unordered_set>
 
 using namespace std;
 
@@ -34,7 +37,36 @@ const int AA_LOOKUP[128] = {
 //    ['-'] = 0
 //};
 
-float get_ctilde(const vector<string>& sequences, int i, int j, int Q) {
+vector<int> generate_random_indices(int list_length, int max_int, unsigned int seed = std::random_device{}()) {
+    // Create a random number generator
+    mt19937 gen(seed);  // Mersenne Twister random number engine
+
+    // Create a vector of all possible indices
+    vector<int> all_indices(max_int);
+    iota(all_indices.begin(), all_indices.end(), 1);  // Fill with 1, 2, 3, ..., N
+
+    // Shuffle the indices
+    shuffle(all_indices.begin(), all_indices.end(), gen);
+
+    // Take the first 'listLength' elements
+    return vector<int>(all_indices.begin(), all_indices.begin() + list_length);
+}
+
+template<typename T>
+vector<T> select_elements(const vector<T>& source_vector, const vector<int>& indices) {
+    vector<T> selected_elements;
+
+    for (int index : indices) {
+        // Adjust index to 0-based indexing and handle out-of-bounds
+        if (index > 0 && index <= source_vector.size()) {
+            selected_elements.push_back(source_vector[index - 1]);
+        }
+    }
+
+    return selected_elements;
+}
+
+float get_ctilde(const vector<string>& sequences, const vector<float>& weights, int i, int j, int Q) {
     vector<int> onept_count_i(Q, 0);
     vector<int> onept_count_j(Q, 0);
     vector<vector<int>> twopt_counts(Q, vector<int>(Q, 0));
@@ -64,7 +96,7 @@ float get_ctilde(const vector<string>& sequences, int i, int j, int Q) {
         }
     }
     
-    return sqrt(ctilde);
+    return weights[i] * weights[j] * sqrt(ctilde);
 }
 
 // Pre-read the alignment file into memory
@@ -78,19 +110,45 @@ vector<string> read_alignment(const string& filename) {
     
     string line;
     while (getline(file, line)) {
-        sequences.push_back(line);
+        if (!line.empty() && line[0] != '>') {
+            sequences.push_back(line);
+        }
     }
     file.close();
     return sequences;
 }
 
-int main() {
-    const int N = 262;  // Matrix dimension
+vector<float> read_weights(const string& filename) {
+    vector<float> weights;
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error opening file!" << endl;
+        return weights;
+    }
+    float weight;
+    while (file >> weight) {
+        weights.push_back(weight);
+    }
+    file.close();
+    return weights;
+}
+
+int main(int argc, char* argv[]) {
+    const int N = atoi(argv[1]);  // Matrix dimension
     const int Q = 21;   // Number of amino acids + gap
-    
+
     // Pre-read the alignment
-    vector<string> sequences = read_alignment("iter_aln_short.txt");
-    if (sequences.empty()) return 1;
+    vector<string> full_sequences = read_alignment(argv[2]);
+    if (full_sequences.empty()) return 1;
+
+    vector<float> full_weights = read_weights(argv[3]);
+    if (full_weights.empty()) {
+        full_weights.resize(full_sequences.size(), 1);
+    }
+    
+    vector<int> random_indices = generate_random_indices(atoi(argv[4]), full_sequences.size(), 42);
+    vector<string> sequences = select_elements(full_sequences, random_indices);
+    vector<float> weights = select_elements(full_weights, random_indices);
     
     // Allocate result matrix
     vector<vector<float>> ctilde_arr(N, vector<float>(N));
@@ -99,7 +157,7 @@ int main() {
     #pragma omp parallel for collapse(2) schedule(dynamic)
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
-            ctilde_arr[i][j] = get_ctilde(sequences, i, j, Q);
+            ctilde_arr[i][j] = get_ctilde(sequences, weights, i, j, Q);
             
             // Print progress only at multiples of 100 and in the master thread
             if (omp_get_thread_num() == 0 && i % 100 == 0 && j % 100 == 0) {
@@ -112,7 +170,7 @@ int main() {
     cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
     
     // Write results to file
-    ofstream ctilde_file("ctilde_iter.csv");
+    ofstream ctilde_file(argv[5]);
     if (!ctilde_file.is_open()) {
         cerr << "Error opening output file!" << endl;
         return 1;

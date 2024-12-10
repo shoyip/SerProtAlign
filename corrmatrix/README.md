@@ -15,7 +15,18 @@ where again $f_{ij}^{ab}$ is the two-point frequency and
 $f_i^a$ is the one-point frequency.
 
 The most efficient implementation by far is the
-`corrmatrix_mmap.cpp` version.
+`corrmatrix.cpp` version.
+
+Compile it and use it in the following way
+
+```
+$ corrmatrix 369 new_aln.faa weights.csv 10000 corr_matrix.csv
+```
+
+where `369` is the number of positions in the alignment, `new_aln.faa` is the
+path to the alignment file, `weights.csv` is the path to the file containing
+the weights for each sequence, `10000` is the number of subsampled sequences
+and `corr_matrix.csv` is the name of the destination file.
 
 Refer to the paper
 
