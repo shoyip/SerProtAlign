@@ -17,7 +17,13 @@ $f_i^a$ is the one-point frequency.
 The most efficient implementation by far is the
 `corrmatrix.cpp` version.
 
-Compile it and use it in the following way
+Compile it
+
+```
+$ g++ -std=c++20 -fopenmp corrmatrix.cpp -o corrmatrix
+```
+
+and use it in the following way
 
 ```
 $ corrmatrix 369 new_aln.faa weights.csv 10000 corr_matrix.csv

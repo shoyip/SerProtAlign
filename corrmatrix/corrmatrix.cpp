@@ -1,156 +1,188 @@
 #include <iostream>
 #include <fstream>
-#include <cstring>
+#include <vector>
 #include <string>
-#include <bitset>
+#include <cstring>
 #include <cmath>
 #include <iomanip>
 #include <omp.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <random>
+#include <algorithm>
+#include <unordered_set>
 
 using namespace std;
 
-// Given an alignment, the number of positions, the number
-// of sequences and the position indices i and j, yields
-// the value of the correlation matrix Ctilde_ij
+const int AA_LOOKUP[128] = {
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  // 0-15
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  // 16-31
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,  // 32-47  ('-' is at 45)
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  // 48-63
+    0,1,0,2,3,4,5,6,7,8,0,9,10,11,12,0,  // 64-79   ('A' is at 65)
+    13,14,15,16,17,0,18,19,0,20,0,0,0,0,0,0,  // 80-95
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  // 96-111
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0   // 112-127
+};
 
-// Read through the specified column of an alignment
-// At each residue, store the value in a NxNxQxQ array
+// Lookup table for amino acid indices
+//const int AA_LOOKUP[128] = {
+//    ['A'] = 1,  ['C'] = 2,  ['D'] = 3,  ['E'] = 4,  ['F'] = 5,
+//    ['G'] = 6,  ['H'] = 7,  ['I'] = 8,  ['K'] = 9,  ['L'] = 10,
+//    ['M'] = 11, ['N'] = 12, ['P'] = 13, ['Q'] = 14, ['R'] = 15,
+//    ['S'] = 16, ['T'] = 17, ['V'] = 18, ['W'] = 19, ['Y'] = 20,
+//    ['-'] = 0
+//};
 
-int get_aa_idx(char residue) {
-    int aa_idx;
-    switch (residue) {
-        case '-':
-            aa_idx = 0;
-            break;
-        case 'A':
-            aa_idx = 1;
-            break;
-        case 'C':
-            aa_idx = 2;
-            break;
-        case 'D':
-            aa_idx = 3;
-            break;
-        case 'E':
-            aa_idx = 4;
-            break;
-        case 'F':
-            aa_idx = 5;
-            break;
-        case 'G':
-            aa_idx = 6;
-            break;
-        case 'H':
-            aa_idx = 7;
-            break;
-        case 'I':
-            aa_idx = 8;
-            break;
-        case 'K':
-            aa_idx = 9;
-            break;
-        case 'L':
-            aa_idx = 10;
-            break;
-        case 'M':
-            aa_idx = 11;
-            break;
-        case 'N':
-            aa_idx = 12;
-            break;
-        case 'P':
-            aa_idx = 13;
-            break;
-        case 'Q':
-            aa_idx = 14;
-            break;
-        case 'R':
-            aa_idx = 15;
-            break;
-        case 'S':
-            aa_idx = 16;
-            break;
-        case 'T':
-            aa_idx = 17;
-            break;
-        case 'V':
-            aa_idx = 18;
-            break;
-        case 'W':
-            aa_idx = 19;
-            break;
-        case 'Y':
-            aa_idx = 20;
-            break;
-    }
-    return aa_idx;
+vector<int> generate_random_indices(int list_length, int max_int, unsigned int seed = std::random_device{}()) {
+    // Create a random number generator
+    mt19937 gen(seed);  // Mersenne Twister random number engine
+
+    // Create a vector of all possible indices
+    vector<int> all_indices(max_int);
+    iota(all_indices.begin(), all_indices.end(), 1);  // Fill with 1, 2, 3, ..., N
+
+    // Shuffle the indices
+    shuffle(all_indices.begin(), all_indices.end(), gen);
+
+    // Take the first 'listLength' elements
+    return vector<int>(all_indices.begin(), all_indices.begin() + list_length);
 }
 
-float get_ctilde(string filename, int i, int j, int Q) {
-    int onept_count_i[Q];
-    int onept_count_j[Q];
-    int twopt_counts[Q][Q];
-    memset(onept_count_i, 0, sizeof(onept_count_i));
-    memset(onept_count_j, 0, sizeof(onept_count_j));
-    memset(twopt_counts, 0, sizeof(twopt_counts));
+template<typename T>
+vector<T> select_elements(const vector<T>& source_vector, const vector<int>& indices) {
+    vector<T> selected_elements;
 
-    ifstream file(filename);
-
-    if(!file.is_open()) {
-        cerr << "Error opening file!" << endl;
+    for (int index : indices) {
+        // Adjust index to 0-based indexing and handle out-of-bounds
+        if (index > 0 && index <= source_vector.size()) {
+            selected_elements.push_back(source_vector[index - 1]);
+        }
     }
 
-    string line;
-    int i_aa_idx, j_aa_idx;
-    int n_seqs = 0;
-    while (getline(file, line)) {
-        n_seqs++;
-        for (size_t k=0; k<line.size(); ++k) {
-            if (k==i) {
-                i_aa_idx = get_aa_idx(line[i]);
-                onept_count_i[i_aa_idx] = 1;
-            } else if (k==j) {
-                j_aa_idx = get_aa_idx(line[j]);
-                onept_count_j[j_aa_idx] = 1;
-            } else {
-                continue;
-            }
-        }
+    return selected_elements;
+}
+
+float get_ctilde(const vector<string>& sequences, const vector<float>& weights, int i, int j, int Q) {
+    vector<int> onept_count_i(Q, 0);
+    vector<int> onept_count_j(Q, 0);
+    vector<vector<int>> twopt_counts(Q, vector<int>(Q, 0));
+    
+    const int n_seqs = sequences.size();
+    
+    // Count occurrences
+    for (const auto& seq : sequences) {
+        int i_aa_idx = AA_LOOKUP[seq[i]];
+        int j_aa_idx = AA_LOOKUP[seq[j]];
+        
+        onept_count_i[i_aa_idx]++;
+        onept_count_j[j_aa_idx]++;
         twopt_counts[i_aa_idx][j_aa_idx]++;
     }
-    file.close();
-
-    float ctilde_arg = 0.;
-    float ctilde = 0.;
-
-    for (int k=0; k<Q; ++k) {
-        for (int l=0; l<Q; ++l) {
-            ctilde_arg = 1. * twopt_counts[k][l] / n_seqs - 1. * onept_count_i[k] * onept_count_j[l] / (n_seqs * n_seqs);
-            ctilde += ctilde_arg * ctilde_arg;
+    
+    // Calculate correlation
+    float ctilde = 0.0f;
+    const float n_seqs_f = static_cast<float>(n_seqs);
+    
+    for (int k = 0; k < Q; ++k) {
+        for (int l = 0; l < Q; ++l) {
+            float freq_pair = twopt_counts[k][l] / n_seqs_f;
+            float freq_prod = (onept_count_i[k] * onept_count_j[l]) / (n_seqs_f * n_seqs_f);
+            float diff = freq_pair - freq_prod;
+            ctilde += diff * diff;
         }
     }
-
-    return ctilde;
+    
+    return weights[i] * weights[j] * sqrt(ctilde);
 }
 
-int main() {
-    float ctilde_arr[693][693];
-    for (int i=0; i<693; ++i) {
-        for (int j=0; j<693; ++j) {
-            cout << "i" << i << "j" << j << endl;
-            float ctilde_val = get_ctilde("aln_short_short.txt", i, j, 21);
-            ctilde_arr[i][j] = ctilde_val;
+// Pre-read the alignment file into memory
+vector<string> read_alignment(const string& filename) {
+    vector<string> sequences;
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error opening file!" << endl;
+        return sequences;
+    }
+    
+    string line;
+    while (getline(file, line)) {
+        if (!line.empty() && line[0] != '>') {
+            sequences.push_back(line);
         }
     }
+    file.close();
+    return sequences;
+}
 
-    ofstream ctilde_file;
-    ctilde_file.open("ctilde.csv");
-    for (int i=0; i<693; ++i) {
-        for (int j=0; j<693; ++j) {
-            ctilde_file << setprecision(6) << ctilde_arr[i][j] << ",";
-        }
-        ctilde_file << endl;
+vector<float> read_weights(const string& filename) {
+    vector<float> weights;
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Error opening file!" << endl;
+        return weights;
     }
-    ctilde_file.close();
+    float weight;
+    while (file >> weight) {
+        weights.push_back(weight);
+    }
+    file.close();
+    return weights;
+}
+
+int main(int argc, char* argv[]) {
+    const int N = atoi(argv[1]);  // Matrix dimension
+    const int Q = 21;   // Number of amino acids + gap
+
+    // Pre-read the alignment
+    vector<string> full_sequences = read_alignment(argv[2]);
+    if (full_sequences.empty()) return 1;
+
+    vector<float> full_weights = read_weights(argv[3]);
+    if (full_weights.empty()) {
+        full_weights.resize(full_sequences.size(), 1);
+    }
+    
+    vector<int> random_indices = generate_random_indices(atoi(argv[4]), full_sequences.size(), 42);
+    vector<string> sequences = select_elements(full_sequences, random_indices);
+    vector<float> weights = select_elements(full_weights, random_indices);
+    
+    // Allocate result matrix
+    vector<vector<float>> ctilde_arr(N, vector<float>(N));
+    
+    // Parallel processing of matrix elements
+    #pragma omp parallel for collapse(2) schedule(dynamic)
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            ctilde_arr[i][j] = get_ctilde(sequences, weights, i, j, Q);
+            
+            // Print progress only at multiples of 100 and in the master thread
+            if (omp_get_thread_num() == 0 && i % 100 == 0 && j % 100 == 0) {
+                cout << "Progress: i=" << i << ", j=" << j << endl;
+            }
+        }
+    }
+    
+    // Print final progress
+    cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
+    
+    // Write results to file
+    ofstream ctilde_file(argv[5]);
+    if (!ctilde_file.is_open()) {
+        cerr << "Error opening output file!" << endl;
+        return 1;
+    }
+    
+    ctilde_file << fixed << setprecision(6);
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N - 1; ++j) {
+            ctilde_file << ctilde_arr[i][j] << ",";
+        }
+        ctilde_file << ctilde_arr[i][N-1] << "\n";
+    }
+    
     return 0;
 }
