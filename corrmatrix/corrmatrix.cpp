@@ -118,6 +118,38 @@ vector<string> read_alignment(const string& filename) {
     return sequences;
 }
 
+void shuffle_alignment(vector<string> alignment) {
+    if (alignment.empty() || alignment[0].empty()) {
+        throw invalid_argument("Sequences must not be empty.");
+    }
+
+
+    size_t num_columns = alignment[0].size();
+    for (const auto& seq : alignment) {
+        if (seq.size() != num_columns) {
+            throw invalid_argument("All sequences must be the same length.");
+        }
+    }
+
+    vector<string> columns(num_columns);
+    for (size_t col = 0; col < num_columns; ++col) {
+        for (const auto& seq : alignment) {
+            columns[col] += seq[col];
+        }
+    }
+
+    mt19937 rng(42);
+    for (auto& column : columns) {
+        shuffle(column.begin(), column.end(), rng);
+    }
+
+    for (size_t row = 0; row < alignment.size(); ++row) {
+        for (size_t col = 0; col < num_columns; ++col) {
+            alignment[row][col] = columns[col][row];
+        }
+    }
+}
+
 vector<float> read_weights(const string& filename) {
     vector<float> weights;
     ifstream file(filename);
@@ -165,6 +197,25 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+    
+    // Print final progress
+    cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
+
+//    // Ctilde for shuffled alignment (but what with reweighting??? can't compare)
+//    vector<vector<float>> ctilde_arr(N, vector<float>(N));
+//    
+//    // Parallel processing of matrix elements
+//    #pragma omp parallel for collapse(2) schedule(dynamic)
+//    for (int i = 0; i < N; ++i) {
+//        for (int j = 0; j < N; ++j) {
+//            ctilde_arr[i][j] = get_ctilde(sequences, weights, i, j, Q);
+//            
+//            // Print progress only at multiples of 100 and in the master thread
+//            if (omp_get_thread_num() == 0 && i % 100 == 0 && j % 100 == 0) {
+//                cout << "Progress: i=" << i << ", j=" << j << endl;
+//            }
+//        }
+//    }
     
     // Print final progress
     cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
