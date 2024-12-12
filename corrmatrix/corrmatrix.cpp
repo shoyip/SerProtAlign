@@ -118,7 +118,7 @@ vector<string> read_alignment(const string& filename) {
     return sequences;
 }
 
-void shuffle_alignment(vector<string> alignment) {
+void shuffle_alignment(vector<string>& alignment, unsigned int seed = std::random_device{}()) {
     if (alignment.empty() || alignment[0].empty()) {
         throw invalid_argument("Sequences must not be empty.");
     }
@@ -138,7 +138,7 @@ void shuffle_alignment(vector<string> alignment) {
         }
     }
 
-    mt19937 rng(42);
+    mt19937 rng(seed);
     for (auto& column : columns) {
         shuffle(column.begin(), column.end(), rng);
     }
@@ -200,25 +200,6 @@ int main(int argc, char* argv[]) {
     
     // Print final progress
     cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
-
-//    // Ctilde for shuffled alignment (but what with reweighting??? can't compare)
-//    vector<vector<float>> ctilde_arr(N, vector<float>(N));
-//    
-//    // Parallel processing of matrix elements
-//    #pragma omp parallel for collapse(2) schedule(dynamic)
-//    for (int i = 0; i < N; ++i) {
-//        for (int j = 0; j < N; ++j) {
-//            ctilde_arr[i][j] = get_ctilde(sequences, weights, i, j, Q);
-//            
-//            // Print progress only at multiples of 100 and in the master thread
-//            if (omp_get_thread_num() == 0 && i % 100 == 0 && j % 100 == 0) {
-//                cout << "Progress: i=" << i << ", j=" << j << endl;
-//            }
-//        }
-//    }
-    
-    // Print final progress
-    cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
     
     // Write results to file
     ofstream ctilde_file(argv[5]);
@@ -233,6 +214,44 @@ int main(int argc, char* argv[]) {
             ctilde_file << ctilde_arr[i][j] << ",";
         }
         ctilde_file << ctilde_arr[i][N-1] << "\n";
+    }
+
+    cout << "Starting computation of statistics for shuffled alignment." << endl;
+
+    shuffle_alignment(sequences, 42);
+
+    // Ctilde for shuffled alignment
+    vector<vector<float>> ctilde_shuffled_arr(N, vector<float>(N));
+    
+    // Parallel processing of matrix elements
+    #pragma omp parallel for collapse(2) schedule(dynamic)
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            ctilde_shuffled_arr[i][j] = get_ctilde(sequences, weights, i, j, Q);
+            
+            // Print progress only at multiples of 100 and in the master thread
+            if (omp_get_thread_num() == 0 && i % 100 == 0 && j % 100 == 0) {
+                cout << "Progress: i=" << i << ", j=" << j << endl;
+            }
+        }
+    }
+    
+    // Print final progress
+    cout << "Completed: i=" << N-1 << ", j=" << N-1 << endl;
+    
+    // Write results to file
+    ofstream ctilde_shuffled_file(argv[6]);
+    if (!ctilde_shuffled_file.is_open()) {
+        cerr << "Error opening output file!" << endl;
+        return 1;
+    }
+    
+    ctilde_shuffled_file << fixed << setprecision(6);
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N - 1; ++j) {
+            ctilde_shuffled_file << ctilde_shuffled_arr[i][j] << ",";
+        }
+        ctilde_shuffled_file << ctilde_shuffled_arr[i][N-1] << "\n";
     }
     
     return 0;
