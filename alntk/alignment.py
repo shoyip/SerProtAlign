@@ -104,31 +104,39 @@ def filter_length(aln, min_len, max_len):
     seq_tbd = np.where(cond_min & cond_max == False)[0]
     return seq_tbd, []
 
+def find_pattern(text, pattern):
+    """
+    """
+    pattern = np.asarray(list(pattern))
+    
+    if len(pattern) > len(text):
+        return np.array([], dtype=int)
+    
+    # Create sliding window view of text
+    windows = np.lib.stride_tricks.as_strided(
+        text, 
+        shape=(len(text) - len(pattern) + 1, len(pattern)),
+        strides=(text.strides[0], text.strides[0])
+    )
+    
+    # Find indices where windows match the pattern
+    match_indices = np.where(np.all(windows == pattern, axis=1))[0]
+    
+    return match_indices
+
+def find_sequence(aln, accession):
+    aln_seqs = aln.get_seqs()
+    aln_descs = aln.get_descs()
+
+    ref_idx = np.where(np.array([e.split('|')[2] for e in aln_descs]) == accession)[0][0]
+
+    return aln_seqs[ref_idx]
+
 def filter_residue(aln, ref_seq_acc, ref_pattern, residue):
     """
     """
     aln_seqs = aln.get_seqs()
     aln_descs = aln.get_descs()
-
-    def find_pattern(text, pattern):
-        """
-        """
-        pattern = np.asarray(list(pattern))
-        
-        if len(pattern) > len(text):
-            return np.array([], dtype=int)
-        
-        # Create sliding window view of text
-        windows = np.lib.stride_tricks.as_strided(
-            text, 
-            shape=(len(text) - len(pattern) + 1, len(pattern)),
-            strides=(text.strides[0], text.strides[0])
-        )
-        
-        # Find indices where windows match the pattern
-        match_indices = np.where(np.all(windows == pattern, axis=1))[0]
-        
-        return match_indices
 
     ref_idx = np.where(np.array([e.split('|')[2] for e in aln_descs]) == ref_seq_acc)[0][0]
     ref_seq = aln_seqs[ref_idx]
@@ -144,26 +152,6 @@ def filter_residues_any(aln, ref_seq_acc, ref_pattern):
     """
     aln_seqs = aln.get_seqs()
     aln_descs = aln.get_descs()
-
-    def find_pattern(text, pattern):
-        """
-        """
-        pattern = np.asarray(list(pattern))
-        
-        if len(pattern) > len(text):
-            return np.array([], dtype=int)
-        
-        # Create sliding window view of text
-        windows = np.lib.stride_tricks.as_strided(
-            text, 
-            shape=(len(text) - len(pattern) + 1, len(pattern)),
-            strides=(text.strides[0], text.strides[0])
-        )
-        
-        # Find indices where windows match the pattern
-        match_indices = np.where(np.all(windows == pattern, axis=1))[0]
-        
-        return match_indices
 
     ref_idx = np.where(np.array([e.split('|')[2] for e in aln_descs]) == ref_seq_acc)[0][0]
     ref_seq = aln_seqs[ref_idx]
