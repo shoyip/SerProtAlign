@@ -67,36 +67,41 @@ vector<T> select_elements(const vector<T>& source_vector, const vector<int>& ind
 }
 
 float get_ctilde(const vector<string>& sequences, const vector<float>& weights, int i, int j, int Q) {
-    vector<int> onept_count_i(Q, 0);
-    vector<int> onept_count_j(Q, 0);
-    vector<vector<int>> twopt_counts(Q, vector<int>(Q, 0));
+    vector<float> onept_count_i(Q, 0);
+    vector<float> onept_count_j(Q, 0);
+    vector<vector<float>> twopt_counts(Q, vector<float>(Q, 0));
     
-    const int n_seqs = sequences.size();
+//    const int n_seqs = sequences.size();
     
     // Count occurrences
-    for (const auto& seq : sequences) {
+    for (size_t m=0; m<sequences.size(); m++) {
+        const auto& seq = sequences[m];
+        const auto& weight = weights[m];
         int i_aa_idx = AA_LOOKUP[seq[i]];
         int j_aa_idx = AA_LOOKUP[seq[j]];
-        
-        onept_count_i[i_aa_idx]++;
-        onept_count_j[j_aa_idx]++;
-        twopt_counts[i_aa_idx][j_aa_idx]++;
+
+        onept_count_i[i_aa_idx] += weight;
+        onept_count_j[j_aa_idx] += weight;
+        twopt_counts[i_aa_idx][j_aa_idx] += weight*weight;
     }
-    
+
     // Calculate correlation
     float ctilde = 0.0f;
-    const float n_seqs_f = static_cast<float>(n_seqs);
+//    const float n_seqs_f = static_cast<float>(n_seqs);
+    float n_seqs_f = 0.;
+    for (const auto& weight : weights)
+        n_seqs_f += weight;
     
-    for (int k = 0; k < Q; ++k) {
-        for (int l = 0; l < Q; ++l) {
-            float freq_pair = twopt_counts[k][l] / n_seqs_f;
-            float freq_prod = (onept_count_i[k] * onept_count_j[l]) / (n_seqs_f * n_seqs_f);
-            float diff = freq_pair - freq_prod;
+    for (int k = 1; k < Q; ++k) {
+        for (int l = 1; l < Q; ++l) {
+            float freq_pair = twopt_counts[k][l];
+            float freq_prod = (onept_count_i[k] * onept_count_j[l]);
+            float diff = (freq_pair - freq_prod) / (n_seqs_f * n_seqs_f);
             ctilde += diff * diff;
         }
     }
     
-    return weights[i] * weights[j] * sqrt(ctilde);
+    return sqrt(ctilde);
 }
 
 // Pre-read the alignment file into memory
